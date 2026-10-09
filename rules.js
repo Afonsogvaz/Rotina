@@ -8,6 +8,7 @@ const weekStart = k => addDays(k, -((parseKey(k).getDay() + 6) % 7));
 
 /* ---------- versões de meta: cada dia usa os parâmetros que valiam nesse dia ---------- */
 function paramsFor(g, k) {
+  if (g.freq === 'weekly') k = addDays(weekStart(k), 6);   // semanal: vale a versão em vigor no domingo
   const vs = g.vers;
   let p = vs[0];
   for (let i = 1; i < vs.length; i++) { if (vs[i].from <= k) p = vs[i]; else break; }
@@ -81,11 +82,14 @@ function cycleMap(g) {
 }
 
 /* ---------- metas do dia ---------- */
-const dayGoals = k => goalsFor(k).filter(g => g.freq !== 'weekly');
+const wdOf = k => (parseKey(k).getDay() + 6) % 7;      // segunda = 0
+const onDay = (g, k) => !g.days || g.days.includes(wdOf(k));
+const dayGoals = k => goalsFor(k).filter(g => g.freq !== 'weekly' && onDay(g, k));
 const weekGoalsFor = k => goalsFor(k).filter(g => g.freq === 'weekly' && weekApplies(g, weekStart(k)));
 
 function counts(k, g) {                          // esta meta conta para o total do dia k?
   if (g.freq === 'weekly') return false;
+  if (!onDay(g, k)) return false;
   if (suspended(g, k)) return false;
   if (g.freq === 'cycle') { const c = cycleMap(g)[k]; return !c || c.type === 'train'; }
   return true;

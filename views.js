@@ -481,7 +481,8 @@ function viewGoals() {
     ? catGroups(act).map(({ cat, gs }) => `<h3 class="cat-title">${catDot(cat)}<span class="ct">${cat ? esc(cat.emoji) + ' ' + esc(cat.name) : 'Sem categoria'}</span></h3><div class="group">${gs.map(row).join('')}</div>`).join('')
     : '<div class="empty"><p>Sem metas ativas. Cria uma para começar a registar.</p></div>';
   html += `<button class="btn main add" data-act="new-goal">Nova meta</button>
-    <button class="btn add" data-act="open-lib">Adicionar metas sugeridas</button>`;
+    <button class="btn add" data-act="open-lib">Adicionar metas sugeridas</button>
+    <button class="btn add" data-act="open-align">Alinhar todas as metas desde uma data</button>`;
 
   html += `<h2 class="section-title">Categorias</h2><p class="cap">Agrupam as metas em Hoje, no Histórico e na Análise.</p>`;
   html += state.cats.length ? `<div class="group">${state.cats.map((c, i, arr) => `<div class="row list">

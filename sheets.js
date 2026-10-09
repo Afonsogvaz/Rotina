@@ -31,8 +31,8 @@ function openGoalSheet(id) {
   ui.sheet = {
     type: 'goal', id: id || null,
     d: g
-      ? { name: g.name, emoji: g.emoji, catId: g.catId || '', freq: g.freq, kind: g.src || g.kind, target: g.target == null ? '' : (g.src === 'wake' ? minToClock(g.target) : g.src === 'bed' ? normClock(g.target) : String(g.target)), cmp: g.cmp, unit: g.unit, step: String(g.step), on: String(g.cycleOn), off: String(g.cycleOff), apply: 'today', start: g.createdAt, end: '', ph: 'Ex.: Ler 30 minutos' }
-      : { name: '', emoji: '🎯', catId: '', freq: 'daily', kind: 'check', target: '', cmp: 'max', unit: '', step: '1', on: '3', off: '1', apply: 'today', start: todayKey(), end: '', ph: 'Ex.: Ler 30 minutos' }
+      ? { name: g.name, emoji: g.emoji, catId: g.catId || '', freq: g.freq, kind: g.src || g.kind, target: g.target == null ? '' : (g.src === 'wake' ? minToClock(g.target) : g.src === 'bed' ? normClock(g.target) : String(g.target)), cmp: g.cmp, unit: g.unit, step: String(g.step), on: String(g.cycleOn), off: String(g.cycleOff), apply: 'today', applyDate: todayKey(), days: (g.days || []).slice(), start: g.createdAt, end: '', ph: 'Ex.: Ler 30 minutos' }
+      : { name: '', emoji: '🎯', catId: '', freq: 'daily', kind: 'check', target: '', cmp: 'max', unit: '', step: '1', on: '3', off: '1', apply: 'today', applyDate: todayKey(), days: [], start: todayKey(), end: '', ph: 'Ex.: Ler 30 minutos' }
   };
   renderSheet();
 }
@@ -93,8 +93,12 @@ function goalSheetBody(s) {
     ${sleepK ? `<div class="fld"><label for="f-target">Horas de sono, no mínimo</label><input class="inp" id="f-target" data-f="target" type="text" inputmode="decimal" value="${esc(d.target)}" placeholder="8"></div>` : ''}
     ${autoK && !sleepK ? `<div class="fld"><label for="f-target">${d.kind === 'wake' ? 'Acordar até às' : 'Adormecer até às'}</label><input class="inp" id="f-target" data-f="target" type="time" value="${esc(d.target)}"></div>` : ''}
     ${g && (cyc || num || autoK) ? `<div class="fld"><label>Se mudares o objetivo, aplicar</label>
-      <div class="seg"><button class="${d.apply === 'today' ? 'on' : ''}" data-act="sheet-set" data-f="apply" data-v="today">A partir de hoje</button><button class="${d.apply === 'all' ? 'on' : ''}" data-act="sheet-set" data-f="apply" data-v="all">Desde o início</button></div>
-      <p class="help">${d.apply === 'today' ? 'O passado fica avaliado com o objetivo que tinhas nessa altura.' : 'Corrige também o passado. Usa isto só se o valor antigo estava errado.'}</p></div>` : ''}
+      <div class="seg three"><button class="${d.apply === 'today' ? 'on' : ''}" data-act="sheet-set" data-f="apply" data-v="today">Desde hoje</button><button class="${d.apply === 'date' ? 'on' : ''}" data-act="sheet-set" data-f="apply" data-v="date">Desde uma data</button><button class="${d.apply === 'all' ? 'on' : ''}" data-act="sheet-set" data-f="apply" data-v="all">Desde o início</button></div>
+      ${d.apply === 'date' ? `<input class="inp" id="f-applydate" data-f="applyDate" type="date" value="${esc(d.applyDate)}" style="margin-top:8px">` : ''}
+      <p class="help">${d.apply === 'today' ? 'O passado fica avaliado com o objetivo que tinhas nessa altura.' : d.apply === 'date' ? 'Os dias antes dessa data mantêm o objetivo antigo; dessa data em diante vale o novo.' : 'Corrige também o passado. Usa isto só se o valor antigo estava errado.'}</p></div>` : ''}
+    ${!cyc && d.freq === 'daily' ? `<div class="fld"><label>Dias da semana</label>
+      <div class="seg wd">${['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((l, i) => `<button class="${!d.days.length || d.days.includes(i) ? 'on' : ''}" data-act="sheet-day" data-i="${i}" aria-label="${['segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado', 'domingo'][i]}">${l}</button>`).join('')}</div>
+      <p class="help">${d.days.length ? 'Nos outros dias a meta não aparece nem conta.' : 'Todos os dias. Toca nos dias em que a meta se aplica.'}</p></div>` : ''}
     <div class="two fld">
       <div><label for="f-start">Começa em</label><input class="inp" id="f-start" data-f="start" type="date" ${g ? '' : `min="${todayKey()}"`} value="${esc(d.start)}"></div>
       <div><label for="f-end">Último dia (opcional)</label><input class="inp" id="f-end" data-f="end" type="date" min="${todayKey()}" value="${esc(d.end)}"></div>
@@ -139,7 +143,7 @@ function saveGoalSheet() {
     archivedAt = addDays(d.end, 1);
   }
   if (created) {
-    state.goals.push(cleanGoal(Object.assign({ id: uid(), createdAt: start, archivedAt, cycleStarts: [] }, base, P)));
+    state.goals.push(cleanGoal(Object.assign({ id: uid(), createdAt: start, archivedAt, cycleStarts: [], days: d.days.slice() }, base, P)));
   } else {
     const g = goalById(s.id);
     const moved = start !== g.createdAt;
@@ -153,10 +157,11 @@ function saveGoalSheet() {
     const typeChanged = g.kind !== base.kind || g.freq !== base.freq || g.src !== base.src;
     const changed = PARAM_KEYS.some(key => g[key] !== P[key]);
     Object.assign(g, base);
+    g.days = base.freq === 'daily' ? d.days.slice() : null;
     if (typeChanged || (changed && (d.apply === 'all' || g.createdAt > tk))) {
       g.vers = [Object.assign({ from: g.createdAt }, P)];
     } else if (changed) {
-      const from = todayKey(), ver = Object.assign({ from }, P);
+      const from = (d.apply === 'date' && ok(d.applyDate)) ? (d.applyDate < g.createdAt ? g.createdAt : d.applyDate) : tk, ver = Object.assign({ from }, P);
       const i = g.vers.findIndex(v => v.from === from);
       if (i >= 0) g.vers[i] = ver; else { g.vers.push(ver); g.vers.sort((a, b) => (a.from < b.from ? -1 : 1)); }
     }
@@ -283,9 +288,10 @@ function renderSheet() {
     cat: ['cat', s.id ? 'Editar categoria' : 'Nova categoria', catSheetBody],
     mode: ['mode', s.id ? 'Editar modo' : 'Novo modo', modeSheetBody],
     span: ['span', s.id ? 'Editar período' : 'Iniciar um modo', spanSheetBody],
-    lib: ['lib', 'Metas sugeridas', librarySheetBody]
+    lib: ['lib', 'Metas sugeridas', librarySheetBody],
+    align: ['align', 'Alinhar metas', alignSheetBody]
   }[s.type];
-  root.innerHTML = sheetShell(T[1], T[2](s), first, null, s.type === 'lib' ? 'Adicionar' : null);
+  root.innerHTML = sheetShell(T[1], T[2](s), first, null, s.type === 'lib' ? 'Adicionar' : s.type === 'align' ? 'Alinhar' : null);
   const body = root.querySelector('.sheet-body');
   if (body) body.scrollTop = scrollTop;
   document.body.classList.add('locked');
@@ -296,5 +302,41 @@ function closeSheet() { ui.sheet = null; renderSheet(); }
 function saveSheet() {
   const s = ui.sheet;
   if (!s) return;
-  ({ goal: saveGoalSheet, cat: saveCatSheet, mode: saveModeSheet, span: saveSpanSheet, lib: saveLibrarySheet })[s.type]();
+  ({ goal: saveGoalSheet, cat: saveCatSheet, mode: saveModeSheet, span: saveSpanSheet, lib: saveLibrarySheet, align: saveAlignSheet })[s.type]();
+}
+
+/* ---------- alinhar todas as metas desde uma data ---------- */
+function openAlignSheet() { ui.sheet = { type: 'align', id: null, d: { from: FIRST_DAY } }; renderSheet(); }
+function alignSheetBody(s) {
+  const n = state.goals.filter(g => !g.archivedAt || g.archivedAt > todayKey()).length;
+  return `<p class="help" style="margin-top:-8px">Põe todas as metas ativas (${n}) iguais desde um dia, com os objetivos que têm agora. Serve para quando acabaste de afinar a rotina e queres que o histórico comece limpo.</p>
+    <div class="fld"><label for="f-from">A partir de</label><input class="inp" id="f-from" data-f="from" type="date" value="${esc(s.d.from)}"></div>
+    <p class="help">O que acontece: metas adicionadas depois de 6 de outubro e ainda sem registos antes deste dia (ou que começavam depois) passam a começar neste dia; alterações de objetivo feitas depois deste dia passam a valer desde ele. O que já registaste não se apaga. Dias anteriores não mudam.</p>`;
+}
+function alignGoals(from) {
+  let moved = 0;
+  state.goals.forEach(g => {
+    if (g.archivedAt && g.archivedAt <= from) return;       // já terminada antes
+    const latest = g.vers[g.vers.length - 1];
+    const logged = Object.keys(state.logs).some(k => k < from && g.id in state.logs[k]) || Object.keys(state.weekly).some(k => k < from && g.id in state.weekly[k]);
+    if (g.createdAt >= from || (g.createdAt > ROUTINE_START && !logged)) {   // começou depois e ainda sem registos: puxa o início
+      if (g.createdAt !== from) moved++;
+      g.createdAt = from; g.vers = [Object.assign({}, latest, { from })]; g.cycleStarts = [];
+    } else {
+      const before = g.vers.filter(v => v.from < from);
+      const last = before[before.length - 1];
+      const same = PARAM_KEYS.every(k => last[k] === latest[k]);
+      if (g.vers.some(v => v.from >= from)) moved++;
+      g.vers = before.concat(same ? [] : [Object.assign({}, latest, { from })]);
+      g.cycleStarts = g.cycleStarts.filter(d => d < from);
+    }
+  });
+  state.goals = state.goals.map(cleanGoal);
+  return moved;
+}
+function saveAlignSheet() {
+  const from = ui.sheet.d.from;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from || '')) { toast('Escolhe uma data.'); return; }
+  const n = alignGoals(from);
+  save(); closeSheet(); render(); toast(n ? `${n} metas alinhadas desde ${from.split('-').reverse().join('/')}` : 'Já estava tudo alinhado');
 }

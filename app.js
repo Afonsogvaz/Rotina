@@ -284,6 +284,15 @@ const actions = {
     renderSheet();
   },
   'open-lib'() { openLibrarySheet(); },
+  'open-align'() { openAlignSheet(); },
+  'sheet-day'(el) {
+    if (!ui.sheet || ui.sheet.type !== 'goal') return;
+    const i = Number(el.dataset.i), d = ui.sheet.d;
+    let a = d.days.length ? d.days.slice() : [0, 1, 2, 3, 4, 5, 6];
+    a = a.includes(i) ? a.filter(x => x !== i) : a.concat(i).sort();
+    d.days = (a.length === 7 || !a.length) ? [] : a;
+    renderSheet();
+  },
   'lib-toggle'(el) { if (ui.sheet && ui.sheet.type === 'lib') { const k = el.dataset.key; ui.sheet.d.sel[k] = !ui.sheet.d.sel[k]; renderSheet(); } },
   'sheet-save'() { if (ui.sheet) saveSheet(); },
   'sheet-close'(el, e) {

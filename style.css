@@ -423,3 +423,4 @@ body, .title, .sum b, .section-title, .dur b, .stepper input, .month h2, .kv b, 
 .row.lib[disabled] { opacity: .55; }
 .row.lib .hint { font-size: 12.5px; }
 .row.lib.is-done .name { color: var(--ink); }
+.seg.wd button { font-size: 14px; padding: 0; }

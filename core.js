@@ -6,7 +6,8 @@
 const KEY = 'rotina:v1';                  // (o nome da chave mantém-se; a versão dos dados vai em state.v)
 const BAK_KEY = 'rotina:bak-v2';          // cópia automática feita antes de migrar dados antigos
 const SCHEMA = 3;
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4';
+const FIRST_DAY = '2026-10-13';
 const ROUTINE_START = '2026-10-06';       // dia em que a rotina nova começou
 const EMOJIS = ['🌅','📰','📚','📖','🌙','📵','🏋️','⚽','🏃','🧘','💧','🥗','☕','🧠','✍️','🎸','🎧','🌿','⏰','🎯','🤝','🧹','🛏️','🍎'];
 const CAT_COLORS = ['#3A5BD9', '#D9A03A', '#3E9B6B', '#D4574E', '#8A5BD0', '#2F9AA8', '#D4579B', '#7A859C'];
@@ -106,6 +107,7 @@ function cleanGoal(g) {
     freq, src,
     target: cur.target, cmp: cur.cmp, unit: cur.unit, step: cur.step, cycleOn: cur.cycleOn, cycleOff: cur.cycleOff,
     vers,
+    days: (freq === 'daily' && Array.isArray(g.days)) ? ((a) => (a.length && a.length < 7 ? a : null))([...new Set(g.days.map(Number).filter(n => n >= 0 && n <= 6))].sort()) : null,
     cycleStarts: Array.isArray(g.cycleStarts) ? g.cycleStarts.filter(isKey).sort() : [],
     createdAt,
     archivedAt: isKey(g.archivedAt) ? g.archivedAt : null
