@@ -419,3 +419,7 @@ body, .title, .sum b, .section-title, .dur b, .stepper input, .month h2, .kv b, 
 .sleep .fl.sq .scale { flex: 1; justify-content: flex-end; }
 .kv b { white-space: nowrap; font-size: 24px; }
 .kv > span { min-width: 0; }
+.row.lib { cursor: pointer; }
+.row.lib[disabled] { opacity: .55; }
+.row.lib .hint { font-size: 12.5px; }
+.row.lib.is-done .name { color: var(--ink); }

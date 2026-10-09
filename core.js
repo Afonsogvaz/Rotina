@@ -6,7 +6,7 @@
 const KEY = 'rotina:v1';                  // (o nome da chave mantém-se; a versão dos dados vai em state.v)
 const BAK_KEY = 'rotina:bak-v2';          // cópia automática feita antes de migrar dados antigos
 const SCHEMA = 3;
-const APP_VERSION = '1.0';
+const APP_VERSION = '1.1';
 const ROUTINE_START = '2026-10-06';       // dia em que a rotina nova começou
 const EMOJIS = ['🌅','📰','📚','📖','🌙','📵','🏋️','⚽','🏃','🧘','💧','🥗','☕','🧠','✍️','🎸','🎧','🌿','⏰','🎯','🤝','🧹','🛏️','🍎'];
 const CAT_COLORS = ['#3A5BD9', '#D9A03A', '#3E9B6B', '#D4574E', '#8A5BD0', '#2F9AA8', '#D4579B', '#7A859C'];
@@ -62,6 +62,7 @@ function fmtDate(k, opts) {
 }
 
 /* ======================= estado ======================= */
+const minToClock = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
 const todayKeyFor = rollover => dkey(new Date(Date.now() - rollover * 3600000));
 
 function newState() {
@@ -88,7 +89,7 @@ function cleanVer(v, number) {
 }
 
 function cleanGoal(g) {
-  const src = g.src === 'sleep' ? 'sleep' : null;
+  const src = ['sleep', 'wake', 'bed'].includes(g.src) ? g.src : null;
   const freq = src ? 'daily' : (g.freq === 'weekly' || g.freq === 'cycle' ? g.freq : 'daily');
   const number = src ? true : (g.kind === 'number' && freq !== 'cycle');
   const createdAt = isKey(g.createdAt) ? g.createdAt : todayKeyFor(4);

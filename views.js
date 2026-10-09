@@ -24,6 +24,12 @@ function hintText(k, g) {
     const m = sleepMinutes(state.sleep[k]);
     return m === null ? `${t} · sem registo de sono` : `${t} · dormiste ${fmtDur(m)}`;
   }
+  if (g.src === 'wake' || g.src === 'bed') {
+    const clk = v => (g.src === 'bed' ? normClock(v) : minToClock(v));
+    const lim = `${g.src === 'wake' ? 'acordar' : 'adormecer'} até às ${clk(p.target)}`;
+    const v = rawVal(k, g);
+    return v === undefined ? `${lim} · sem registo de sono` : `${lim} · ${g.src === 'wake' ? 'acordaste' : 'adormeceste'} às ${clk(v)}`;
+  }
   if (isBad(k, g)) return `${t}, ${p.cmp === 'max' ? 'ficaste acima' : 'ficaste abaixo'}`;
   return t;
 }
@@ -90,7 +96,7 @@ function rowHTML(k, g) {
     return `<div class="row rest" data-rowid="${g.id}"><span class="emo">${esc(g.emoji)}</span>
       <span class="name">${esc(g.name)}<span class="hint">Suspensa${m ? ' em ' + esc(m.mode.name) : ''}</span></span><span class="pill">Suspensa</span></div>`;
   }
-  if (g.src === 'sleep') {
+  if (g.src) {
     return `<div class="row num auto ${done ? 'is-done' : ''}" data-rowid="${g.id}"><div class="top">
       <span class="emo">${esc(g.emoji)}</span>
       <span class="name">${esc(g.name)}<span class="hint ${isBad(k, g) ? 'bad' : ''}">${esc(hintText(k, g))}</span></span>
@@ -441,6 +447,8 @@ function viewAnalysis() {
 function goalDesc(g) {
   if (g.freq === 'cycle') return `Ciclo: ${g.cycleOn} ${g.cycleOn === 1 ? 'dia' : 'dias'} de treino, ${g.cycleOff} de pausa`;
   if (g.src === 'sleep') return `Horas de sono, no mínimo ${fmtNum(g.target)} h (automático)`;
+  if (g.src === 'wake') return `Acordar até às ${minToClock(g.target)} (automático)`;
+  if (g.src === 'bed') return `Adormecer até às ${normClock(g.target)} (automático)`;
   const lim = g.kind === 'number'
     ? `${g.cmp === 'max' ? 'no máximo' : 'no mínimo'} ${fmtNum(g.target)}${g.unit ? ' ' + g.unit : ''}`
     : 'sim ou não';
@@ -472,7 +480,8 @@ function viewGoals() {
   html += act.length
     ? catGroups(act).map(({ cat, gs }) => `<h3 class="cat-title">${catDot(cat)}<span class="ct">${cat ? esc(cat.emoji) + ' ' + esc(cat.name) : 'Sem categoria'}</span></h3><div class="group">${gs.map(row).join('')}</div>`).join('')
     : '<div class="empty"><p>Sem metas ativas. Cria uma para começar a registar.</p></div>';
-  html += `<button class="btn main add" data-act="new-goal">Nova meta</button>`;
+  html += `<button class="btn main add" data-act="new-goal">Nova meta</button>
+    <button class="btn add" data-act="open-lib">Adicionar metas sugeridas</button>`;
 
   html += `<h2 class="section-title">Categorias</h2><p class="cap">Agrupam as metas em Hoje, no Histórico e na Análise.</p>`;
   html += state.cats.length ? `<div class="group">${state.cats.map((c, i, arr) => `<div class="row list">

@@ -246,7 +246,7 @@ function review(kind, off) {
 
 /* ---------- séries para gráficos ---------- */
 function metricOptions() {
-  const o = [{ id: 'pct', label: 'Cumprimento do dia (%)' }, { id: 'sleep', label: 'Sono (horas)' }, { id: 'mood', label: 'Humor (1 a 5)' }, { id: 'tired', label: 'Cansaço médio (1 a 5)' }];
+  const o = [{ id: 'pct', label: 'Cumprimento do dia (%)' }, { id: 'sleep', label: 'Sono (horas)' }, { id: 'wake', label: 'Hora de acordar' }, { id: 'bed', label: 'Hora de adormecer' }, { id: 'mood', label: 'Humor (1 a 5)' }, { id: 'tired', label: 'Cansaço médio (1 a 5)' }];
   state.goals.filter(g => g.kind === 'number' && !g.src && g.freq !== 'weekly').forEach(g => o.push({ id: 'g:' + g.id, label: `${g.emoji} ${g.name}${g.unit ? ' (' + g.unit + ')' : ''}` }));
   return o;
 }
@@ -261,18 +261,26 @@ function metricSeries(id, days) {
   if (g) { target = effParams(g, tk).target; unit = g.unit; }
   if (id === 'pct') { unit = '%'; fixed = [0, 100]; fmt = v => Math.round(v) + '%'; }
   if (id === 'sleep') { unit = 'h'; target = state.settings.sleepGoal; }
+  let tfmt = null;
+  if (id === 'wake' || id === 'bed') {
+    const ag = state.goals.find(x => x.src === id && !x.archivedAt);
+    target = ag ? effParams(ag, tk).target : null;
+    fmt = id === 'wake' ? minToClock : normClock; tfmt = fmt;
+  }
   if (id === 'mood' || id === 'tired') fixed = [1, 5];
   for (let k = a; k <= tk; k = addDays(k, 1)) {
     if (!isRegistered(k)) continue;
     let v;
     if (id === 'pct') { const di = dayInfo(k); v = di.total ? di.pct * 100 : undefined; }
     else if (id === 'sleep') v = sleepHours(k);
+    else if (id === 'wake') v = wakeMin(k);
+    else if (id === 'bed') v = bedMin(k);
     else if (id === 'mood') v = checkAt(k).mood;
     else if (id === 'tired') { const t = tiredAvg(k); v = t === null ? undefined : t; }
     else if (g) { const x = (state.logs[k] || {})[g.id]; v = typeof x === 'number' ? x : undefined; }
     if (v !== undefined) pts.push({ k, v });
   }
-  return { pts, target, unit, fixed, fmt };
+  return { pts, target, unit, fixed, fmt, tfmt };
 }
 
 /* ---------- CSV (Excel em português: separador ; e vírgula decimal) ---------- */
@@ -305,6 +313,7 @@ function csvText() {
         return isDone(k, g) ? 'treino' : (t.light ? 'leve' : 'falha');
       }
       if (suspended(g, k)) return 'suspensa';
+      if (g.src === 'wake' || g.src === 'bed') return rawVal(k, g) === undefined ? '' : (isDone(k, g) ? 1 : 0);
       const v = rawVal(k, g);
       return g.kind === 'check' ? (v === true ? 1 : 0) : (typeof v === 'number' ? v : '');
     });

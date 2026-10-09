@@ -267,19 +267,24 @@ const actions = {
   /* ----- folha ----- */
   'sheet-set'(el) {
     if (!ui.sheet) return;
-    const f = el.dataset.f, d = ui.sheet.d, v = el.dataset.v;
+    const f = el.dataset.f, d = ui.sheet.d, v = el.dataset.v, prevKind = d.kind;
     d[f] = v;
     if (ui.sheet.type === 'goal') {
       if (f === 'freq' && v === 'cycle') d.kind = 'check';
-      if (f === 'freq' && v === 'weekly' && d.kind === 'sleep') d.kind = 'check';
+      if (f === 'freq' && v === 'weekly' && ['sleep', 'wake', 'bed'].includes(d.kind)) d.kind = 'check';
       if ((f === 'freq' && v === 'weekly' && d.kind === 'number') || (f === 'kind' && v === 'number' && d.freq === 'weekly')) {
         if (d.target === '') { d.target = '1'; d.cmp = 'min'; d.unit = 'vezes'; d.step = '1'; }
       }
       if (f === 'kind' && v === 'number' && d.step === '') d.step = '1';
-      if (f === 'kind' && v === 'sleep') { d.cmp = 'min'; d.unit = 'h'; d.step = '0.5'; if (d.target === '' || d.target === '1') d.target = String(state.settings.sleepGoal); }
+      if (f === 'kind' && ['sleep', 'wake', 'bed'].includes(v) && v !== prevKind) {
+        if (v === 'sleep') { d.cmp = 'min'; d.unit = 'h'; d.step = '0.5'; d.target = String(state.settings.sleepGoal); }
+        else d.target = v === 'wake' ? '08:00' : '00:00';
+      }
     }
     renderSheet();
   },
+  'open-lib'() { openLibrarySheet(); },
+  'lib-toggle'(el) { if (ui.sheet && ui.sheet.type === 'lib') { const k = el.dataset.key; ui.sheet.d.sel[k] = !ui.sheet.d.sel[k]; renderSheet(); } },
   'sheet-save'() { if (ui.sheet) saveSheet(); },
   'sheet-close'(el, e) {
     if (el.classList.contains('backdrop') && e.target !== el) return;

@@ -1,4 +1,4 @@
-# Rotina 1.0
+# Rotina 1.1
 
 App pessoal de hábitos e metas. Funciona no browser (PWA), sem contas e sem servidores:
 os dados ficam guardados no próprio telemóvel (localStorage).
@@ -16,6 +16,7 @@ e os scripts, carregados por esta ordem:
 | `charts.js` | gráficos em SVG |
 | `views.js` | ecrãs (Hoje, Histórico, Análise, Metas, Dados) |
 | `sheets.js` | folhas de edição (meta, categoria, modo, período) |
+| `library.js` | metas sugeridas (catálogo editável: lista `CATALOG`) |
 | `app.js` | ações, eventos e arranque |
 
 ## Como se mexe no código

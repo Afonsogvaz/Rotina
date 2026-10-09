@@ -1,7 +1,7 @@
 /* Rotina 1.0, folhas de edição: metas, categorias, modos e períodos. */
 'use strict';
 
-function sheetShell(title, bodyHTML, first, label) {
+function sheetShell(title, bodyHTML, first, label, saveLabel) {
   return `<div class="backdrop" data-act="sheet-close">
     <div class="sheet ${first ? 'enter' : ''}" role="dialog" aria-modal="true" aria-label="${esc(label || title)}">
       <div class="grab"></div>
@@ -11,7 +11,7 @@ function sheetShell(title, bodyHTML, first, label) {
       </div>
       <div class="sheet-foot">
         <button class="btn" data-act="sheet-close">Cancelar</button>
-        <button class="btn main" data-act="sheet-save">Guardar</button>
+        <button class="btn main" data-act="sheet-save">${saveLabel || 'Guardar'}</button>
       </div>
     </div></div>`;
 }
@@ -31,14 +31,14 @@ function openGoalSheet(id) {
   ui.sheet = {
     type: 'goal', id: id || null,
     d: g
-      ? { name: g.name, emoji: g.emoji, catId: g.catId || '', freq: g.freq, kind: g.src === 'sleep' ? 'sleep' : g.kind, target: g.target == null ? '' : String(g.target), cmp: g.cmp, unit: g.unit, step: String(g.step), on: String(g.cycleOn), off: String(g.cycleOff), apply: 'today', ph: 'Ex.: Ler 30 minutos' }
+      ? { name: g.name, emoji: g.emoji, catId: g.catId || '', freq: g.freq, kind: g.src || g.kind, target: g.target == null ? '' : (g.src === 'wake' ? minToClock(g.target) : g.src === 'bed' ? normClock(g.target) : String(g.target)), cmp: g.cmp, unit: g.unit, step: String(g.step), on: String(g.cycleOn), off: String(g.cycleOff), apply: 'today', ph: 'Ex.: Ler 30 minutos' }
       : { name: '', emoji: '🎯', catId: '', freq: 'daily', kind: 'check', target: '', cmp: 'max', unit: '', step: '1', on: '3', off: '1', apply: 'today', ph: 'Ex.: Ler 30 minutos' }
   };
   renderSheet();
 }
 
 function goalSheetBody(s) {
-  const d = s.d, cyc = d.freq === 'cycle', sleepK = !cyc && d.kind === 'sleep', num = !cyc && d.kind === 'number';
+  const d = s.d, cyc = d.freq === 'cycle', autoK = !cyc && ['sleep', 'wake', 'bed'].includes(d.kind), sleepK = autoK && d.kind === 'sleep', num = !cyc && d.kind === 'number';
   const g = s.id ? goalById(s.id) : null;
   const catChips = `<div class="pchips">
       <button class="pc ${!d.catId ? 'on' : ''}" data-act="sheet-set" data-f="catId" data-v="">Nenhuma</button>
@@ -66,9 +66,13 @@ function goalSheetBody(s) {
       <div class="seg three">
         <button class="${d.kind === 'check' ? 'on' : ''}" data-act="sheet-set" data-f="kind" data-v="check">Sim ou não</button>
         <button class="${num ? 'on' : ''}" data-act="sheet-set" data-f="kind" data-v="number">Número</button>
-        <button class="${sleepK ? 'on' : ''}" data-act="sheet-set" data-f="kind" data-v="sleep" ${d.freq === 'weekly' ? 'disabled' : ''}>Sono (auto)</button>
+        <button class="${autoK ? 'on' : ''}" data-act="sheet-set" data-f="kind" data-v="${autoK ? d.kind : 'sleep'}" ${d.freq === 'weekly' ? 'disabled' : ''}>Automático</button>
       </div>
-      ${sleepK ? '<p class="help">Usa as horas que registas no cartão do Sono. Não precisas de a marcar à mão.</p>' : ''}
+      ${autoK ? `<div class="pchips" style="margin-top:10px">
+        <button class="pc ${d.kind === 'sleep' ? 'on' : ''}" data-act="sheet-set" data-f="kind" data-v="sleep">Horas de sono</button>
+        <button class="pc ${d.kind === 'wake' ? 'on' : ''}" data-act="sheet-set" data-f="kind" data-v="wake">Hora de acordar</button>
+        <button class="pc ${d.kind === 'bed' ? 'on' : ''}" data-act="sheet-set" data-f="kind" data-v="bed">Hora de adormecer</button></div>
+        <p class="help">Usa as horas que registas no cartão do Sono. Não precisas de a marcar à mão.</p>` : ''}
     </div>`}
     ${num ? `
     <div class="fld">
@@ -87,7 +91,8 @@ function goalSheetBody(s) {
       <input class="inp" id="f-step" data-f="step" type="text" inputmode="decimal" value="${esc(d.step)}" placeholder="5">
     </div>` : ''}
     ${sleepK ? `<div class="fld"><label for="f-target">Horas de sono, no mínimo</label><input class="inp" id="f-target" data-f="target" type="text" inputmode="decimal" value="${esc(d.target)}" placeholder="8"></div>` : ''}
-    ${g && (cyc || num || sleepK) ? `<div class="fld"><label>Se mudares o objetivo, aplicar</label>
+    ${autoK && !sleepK ? `<div class="fld"><label for="f-target">${d.kind === 'wake' ? 'Acordar até às' : 'Adormecer até às'}</label><input class="inp" id="f-target" data-f="target" type="time" value="${esc(d.target)}"></div>` : ''}
+    ${g && (cyc || num || autoK) ? `<div class="fld"><label>Se mudares o objetivo, aplicar</label>
       <div class="seg"><button class="${d.apply === 'today' ? 'on' : ''}" data-act="sheet-set" data-f="apply" data-v="today">A partir de hoje</button><button class="${d.apply === 'all' ? 'on' : ''}" data-act="sheet-set" data-f="apply" data-v="all">Desde o início</button></div>
       <p class="help">${d.apply === 'today' ? 'O passado fica avaliado com o objetivo que tinhas nessa altura.' : 'Corrige também o passado. Usa isto só se o valor antigo estava errado.'}</p></div>` : ''}
     ${g ? `<div class="actions"><div class="two"><button class="btn" data-act="archive" data-id="${g.id}">Arquivar</button><button class="btn danger" data-act="delete" data-id="${g.id}">Apagar</button></div></div>` : ''}`;
@@ -96,7 +101,7 @@ function goalSheetBody(s) {
 function saveGoalSheet() {
   const s = ui.sheet, d = s.d, name = d.name.trim();
   if (!name) { toast('Dá um nome à meta.'); return; }
-  const cyc = d.freq === 'cycle', sleepK = !cyc && d.kind === 'sleep', num = !cyc && d.kind === 'number';
+  const cyc = d.freq === 'cycle', autoK = !cyc && ['sleep', 'wake', 'bed'].includes(d.kind), sleepK = autoK && d.kind === 'sleep', num = !cyc && d.kind === 'number';
   const P = { target: null, cmp: d.cmp === 'min' ? 'min' : 'max', unit: '', step: 1, cycleOn: 3, cycleOff: 1 };
   if (cyc) {
     P.cycleOn = Math.round(parseNum(d.on)); P.cycleOff = Math.round(parseNum(d.off));
@@ -107,6 +112,10 @@ function saveGoalSheet() {
     P.target = parseNum(d.target);
     if (P.target === null || P.target <= 0 || P.target > 14) { toast('Define as horas de sono (um número entre 1 e 14).'); return; }
     P.cmp = 'min'; P.unit = 'h'; P.step = 0.5;
+  } else if (autoK) {
+    if (!/^\d{2}:\d{2}$/.test(d.target)) { toast('Escolhe a hora limite.'); return; }
+    P.target = d.kind === 'wake' ? Number(d.target.slice(0, 2)) * 60 + Number(d.target.slice(3)) : bedNorm(d.target);
+    P.cmp = 'max'; P.unit = ''; P.step = 1;
   } else if (num) {
     P.target = parseNum(d.target);
     if (P.target === null || P.target < 0) { toast('Define o valor do objetivo (um número).'); return; }
@@ -114,7 +123,7 @@ function saveGoalSheet() {
     P.step = parseNum(d.step);
     if (P.step === null || P.step <= 0) P.step = 1;
   }
-  const base = { name, emoji: oneEmoji(d.emoji), catId: d.catId || null, freq: sleepK ? 'daily' : d.freq, kind: (num || sleepK) ? 'number' : 'check', src: sleepK ? 'sleep' : null };
+  const base = { name, emoji: oneEmoji(d.emoji), catId: d.catId || null, freq: autoK ? 'daily' : d.freq, kind: (num || autoK) ? 'number' : 'check', src: autoK ? d.kind : null };
   const created = !s.id;
   if (created) {
     state.goals.push(cleanGoal(Object.assign({ id: uid(), createdAt: todayKey(), archivedAt: null, cycleStarts: [] }, base, P)));
@@ -181,7 +190,7 @@ function modeSheetBody(s) {
       <select class="sel" data-rg="${g.id}" aria-label="${esc(g.name)}">
         <option value="normal" ${r.t === 'normal' ? 'selected' : ''}>Normal</option>
         <option value="off" ${r.t === 'off' ? 'selected' : ''}>Suspensa</option>
-        ${g.kind === 'number' ? `<option value="target" ${r.t === 'target' ? 'selected' : ''}>Outro objetivo</option>` : ''}
+        ${g.kind === 'number' && g.src !== 'wake' && g.src !== 'bed' ? `<option value="target" ${r.t === 'target' ? 'selected' : ''}>Outro objetivo</option>` : ''}
       </select>
       ${r.t === 'target' ? `<label class="mr-v"><input class="inp" data-rv="${g.id}" type="text" inputmode="decimal" value="${esc(r.v)}" aria-label="Objetivo em modo"><span>${esc(p.unit)}</span></label>` : ''}</div>`;
   }).join('');
@@ -252,9 +261,10 @@ function renderSheet() {
     goal: ['goal', s.id ? 'Editar meta' : 'Nova meta', goalSheetBody],
     cat: ['cat', s.id ? 'Editar categoria' : 'Nova categoria', catSheetBody],
     mode: ['mode', s.id ? 'Editar modo' : 'Novo modo', modeSheetBody],
-    span: ['span', s.id ? 'Editar período' : 'Iniciar um modo', spanSheetBody]
+    span: ['span', s.id ? 'Editar período' : 'Iniciar um modo', spanSheetBody],
+    lib: ['lib', 'Metas sugeridas', librarySheetBody]
   }[s.type];
-  root.innerHTML = sheetShell(T[1], T[2](s), first);
+  root.innerHTML = sheetShell(T[1], T[2](s), first, null, s.type === 'lib' ? 'Adicionar' : null);
   const body = root.querySelector('.sheet-body');
   if (body) body.scrollTop = scrollTop;
   document.body.classList.add('locked');
@@ -265,5 +275,5 @@ function closeSheet() { ui.sheet = null; renderSheet(); }
 function saveSheet() {
   const s = ui.sheet;
   if (!s) return;
-  ({ goal: saveGoalSheet, cat: saveCatSheet, mode: saveModeSheet, span: saveSpanSheet })[s.type]();
+  ({ goal: saveGoalSheet, cat: saveCatSheet, mode: saveModeSheet, span: saveSpanSheet, lib: saveLibrarySheet })[s.type]();
 }

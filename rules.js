@@ -104,8 +104,13 @@ function sleepMinutes(s) {
 const fmtDur = m => `${Math.floor(m / 60)}h ${pad(m % 60)}min`;
 function sleepHours(k) { const m = sleepMinutes(state.sleep[k]); return m === null ? undefined : Math.round(m / 60 * 100) / 100; }
 
+function wakeMin(k) { const s = state.sleep[k]; if (!s || !s.wake) return undefined; const [h, m] = s.wake.split(':').map(Number); return h * 60 + m; }
+function bedMin(k) { const s = state.sleep[k]; return s && s.bed ? bedNorm(s.bed) : undefined; }
+
 function rawVal(k, g) {
   if (g.src === 'sleep') return sleepHours(k);
+  if (g.src === 'wake') return wakeMin(k);
+  if (g.src === 'bed') return bedMin(k);
   return g.freq === 'weekly' ? (state.weekly[weekStart(k)] || {})[g.id] : (state.logs[k] || {})[g.id];
 }
 const val = rawVal;

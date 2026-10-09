@@ -2,7 +2,7 @@
 'use strict';
 
 function lineChart(series) {
-  const { pts, target, unit, fixed, fmt } = series;
+  const { pts, target, unit, fixed, fmt, tfmt } = series;
   if (pts.length < 2) return '<p class="cap">Ainda há poucos registos para desenhar a evolução (precisas de 2 dias ou mais).</p>';
   const W = 340, H = 180, L = 38, R = 10, T = 12, B = 26;
   let lo = Math.min(...pts.map(p => p.v)), hi = Math.max(...pts.map(p => p.v));
@@ -16,7 +16,7 @@ function lineChart(series) {
   const f = fmt || (v => fmt1(v));
   let g = ticks.map(v => `<line class="ch-grid" x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text class="ch-txt" x="${L - 6}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${esc(f(v))}</text>`).join('');
   if (target !== null && target !== undefined) {
-    g += `<line class="ch-target" x1="${L}" x2="${W - R}" y1="${y(target).toFixed(1)}" y2="${y(target).toFixed(1)}"/><text class="ch-txt tg" x="${W - R}" y="${(y(target) - 4).toFixed(1)}" text-anchor="end">objetivo ${esc(fmtNum(target))}${unit && unit !== '%' ? ' ' + esc(unit) : ''}</text>`;
+    g += `<line class="ch-target" x1="${L}" x2="${W - R}" y1="${y(target).toFixed(1)}" y2="${y(target).toFixed(1)}"/><text class="ch-txt tg" x="${W - R}" y="${(y(target) - 4).toFixed(1)}" text-anchor="end">objetivo ${esc(tfmt ? tfmt(target) : fmtNum(target))}${!tfmt && unit && unit !== '%' ? ' ' + esc(unit) : ''}</text>`;
   }
   const path = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.k).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
   const dots = pts.length <= 45 ? pts.map(p => `<circle class="ch-dot" cx="${x(p.k).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3"><title>${esc(shortDate(p.k))}: ${esc(f(p.v))}</title></circle>`).join('') : '';
