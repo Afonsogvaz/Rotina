@@ -6,7 +6,7 @@
 const KEY = 'rotina:v1';                  // (o nome da chave mantém-se; a versão dos dados vai em state.v)
 const BAK_KEY = 'rotina:bak-v2';          // cópia automática feita antes de migrar dados antigos
 const SCHEMA = 3;
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.3.1';
 const ROUTINE_START = '2026-10-06';       // dia em que a rotina nova começou
 const EMOJIS = ['🌅','📰','📚','📖','🌙','📵','🏋️','⚽','🏃','🧘','💧','🥗','☕','🧠','✍️','🎸','🎧','🌿','⏰','🎯','🤝','🧹','🛏️','🍎'];
 const CAT_COLORS = ['#3A5BD9', '#D9A03A', '#3E9B6B', '#D4574E', '#8A5BD0', '#2F9AA8', '#D4579B', '#7A859C'];

@@ -1,7 +1,7 @@
 /* Service worker: deixa a app abrir sem internet.
    Estratégia: responde logo com a cópia guardada e atualiza-a em segundo plano,
    por isso uma versão nova da app aparece na abertura seguinte. */
-const CACHE = 'rotina-v7';
+const CACHE = 'rotina-v8';
 const ASSETS = [
   './', './index.html', './style.css', './manifest.json',
   './core.js', './rules.js', './stats.js', './charts.js', './views.js', './sheets.js', './library.js', './app.js',
