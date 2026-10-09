@@ -31,8 +31,8 @@ function openGoalSheet(id) {
   ui.sheet = {
     type: 'goal', id: id || null,
     d: g
-      ? { name: g.name, emoji: g.emoji, catId: g.catId || '', freq: g.freq, kind: g.src || g.kind, target: g.target == null ? '' : (g.src === 'wake' ? minToClock(g.target) : g.src === 'bed' ? normClock(g.target) : String(g.target)), cmp: g.cmp, unit: g.unit, step: String(g.step), on: String(g.cycleOn), off: String(g.cycleOff), apply: 'today', ph: 'Ex.: Ler 30 minutos' }
-      : { name: '', emoji: '🎯', catId: '', freq: 'daily', kind: 'check', target: '', cmp: 'max', unit: '', step: '1', on: '3', off: '1', apply: 'today', ph: 'Ex.: Ler 30 minutos' }
+      ? { name: g.name, emoji: g.emoji, catId: g.catId || '', freq: g.freq, kind: g.src || g.kind, target: g.target == null ? '' : (g.src === 'wake' ? minToClock(g.target) : g.src === 'bed' ? normClock(g.target) : String(g.target)), cmp: g.cmp, unit: g.unit, step: String(g.step), on: String(g.cycleOn), off: String(g.cycleOff), apply: 'today', start: g.createdAt, end: '', ph: 'Ex.: Ler 30 minutos' }
+      : { name: '', emoji: '🎯', catId: '', freq: 'daily', kind: 'check', target: '', cmp: 'max', unit: '', step: '1', on: '3', off: '1', apply: 'today', start: todayKey(), end: '', ph: 'Ex.: Ler 30 minutos' }
   };
   renderSheet();
 }
@@ -95,7 +95,12 @@ function goalSheetBody(s) {
     ${g && (cyc || num || autoK) ? `<div class="fld"><label>Se mudares o objetivo, aplicar</label>
       <div class="seg"><button class="${d.apply === 'today' ? 'on' : ''}" data-act="sheet-set" data-f="apply" data-v="today">A partir de hoje</button><button class="${d.apply === 'all' ? 'on' : ''}" data-act="sheet-set" data-f="apply" data-v="all">Desde o início</button></div>
       <p class="help">${d.apply === 'today' ? 'O passado fica avaliado com o objetivo que tinhas nessa altura.' : 'Corrige também o passado. Usa isto só se o valor antigo estava errado.'}</p></div>` : ''}
-    ${g ? `<div class="actions"><div class="two"><button class="btn" data-act="archive" data-id="${g.id}">Arquivar</button><button class="btn danger" data-act="delete" data-id="${g.id}">Apagar</button></div></div>` : ''}`;
+    <div class="two fld">
+      <div><label for="f-start">Começa em</label><input class="inp" id="f-start" data-f="start" type="date" ${g && g.createdAt <= todayKey() ? 'disabled' : `min="${todayKey()}"`} value="${esc(d.start)}"></div>
+      <div><label for="f-end">Último dia (opcional)</label><input class="inp" id="f-end" data-f="end" type="date" min="${todayKey()}" value="${esc(d.end)}"></div>
+      <p class="help span2">Antes da data de início a meta não aparece nem conta. Depois do último dia deixa de aparecer, e tudo o que registaste até lá fica no histórico.</p>
+    </div>
+    ${g ? `<div class="actions"><div class="two"><button class="btn" data-act="archive" data-id="${g.id}">Terminar hoje</button><button class="btn danger" data-act="delete" data-id="${g.id}">Apagar</button></div></div>` : ''}`;
 }
 
 function saveGoalSheet() {
@@ -124,15 +129,26 @@ function saveGoalSheet() {
     if (P.step === null || P.step <= 0) P.step = 1;
   }
   const base = { name, emoji: oneEmoji(d.emoji), catId: d.catId || null, freq: autoK ? 'daily' : d.freq, kind: (num || autoK) ? 'number' : 'check', src: autoK ? d.kind : null };
-  const created = !s.id;
+  const created = !s.id, tk = todayKey(), ok = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '');
+  const gOld = created ? null : goalById(s.id);
+  let start = gOld ? gOld.createdAt : tk;
+  if ((!gOld || gOld.createdAt > tk) && ok(d.start)) start = d.start < tk ? tk : d.start;
+  let archivedAt = gOld ? gOld.archivedAt : null;
+  if (ok(d.end)) {
+    if (d.end < start || d.end < tk) { toast('O último dia tem de ser hoje ou depois (e depois do início).'); return; }
+    archivedAt = addDays(d.end, 1);
+  }
   if (created) {
-    state.goals.push(cleanGoal(Object.assign({ id: uid(), createdAt: todayKey(), archivedAt: null, cycleStarts: [] }, base, P)));
+    state.goals.push(cleanGoal(Object.assign({ id: uid(), createdAt: start, archivedAt, cycleStarts: [] }, base, P)));
   } else {
     const g = goalById(s.id);
-    const typeChanged = g.kind !== base.kind || g.freq !== base.freq || g.src !== base.src;
+    const moved = start !== g.createdAt;
+    if (moved) { g.createdAt = start; g.cycleStarts = []; }
+    g.archivedAt = archivedAt;
+    const typeChanged = moved || g.kind !== base.kind || g.freq !== base.freq || g.src !== base.src;
     const changed = PARAM_KEYS.some(key => g[key] !== P[key]);
     Object.assign(g, base);
-    if (typeChanged || (changed && d.apply === 'all')) {
+    if (typeChanged || (changed && (d.apply === 'all' || g.createdAt > tk))) {
       g.vers = [Object.assign({ from: g.createdAt }, P)];
     } else if (changed) {
       const from = todayKey(), ver = Object.assign({ from }, P);

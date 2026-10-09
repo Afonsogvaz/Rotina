@@ -506,7 +506,7 @@ function viewGoals() {
 
   if (arch.length) {
     html += `<h2 class="sub-title">Arquivadas<small>o histórico mantém-se</small></h2><div class="group">${arch.map(g => `<div class="row list">
-      <span class="main"><span class="emo">${esc(g.emoji)}</span><span class="name">${esc(g.name)}</span></span>
+      <span class="main"><span class="emo">${esc(g.emoji)}</span><span class="name">${esc(g.name)}<span class="hint">${g.archivedAt > todayKey() ? 'ativa até ' + esc(shortDate(addDays(g.archivedAt, -1))) : 'terminada'}</span></span></span>
       <button class="link" data-act="restore" data-id="${g.id}" style="padding:0 12px;min-height:44px">Restaurar</button></div>`).join('')}</div>`;
   }
   return html;
