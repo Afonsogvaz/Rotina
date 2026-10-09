@@ -1,4 +1,4 @@
-# Rotina 1.1
+# Rotina 1.2
 
 App pessoal de hábitos e metas. Funciona no browser (PWA), sem contas e sem servidores:
 os dados ficam guardados no próprio telemóvel (localStorage).

@@ -45,7 +45,7 @@ const hasGoalNamed = name => state.goals.some(g => !g.archivedAt && g.name === n
 function openLibrarySheet() {
   const sel = {};
   CATALOG.forEach(it => { sel[it.key] = !!it.pre && !hasGoalNamed(it.name); });
-  ui.sheet = { type: 'lib', id: null, d: { sel } };
+  ui.sheet = { type: 'lib', id: null, d: { sel, start: todayKey() } };
   renderSheet();
 }
 
@@ -53,7 +53,10 @@ function librarySheetBody(s) {
   const groups = [];
   CATALOG.forEach(it => { if (!groups.includes(it.group)) groups.push(it.group); });
   const chosen = CATALOG.filter(it => s.d.sel[it.key]).length;
-  return `<p class="help" style="margin-top:-8px">Toca para escolher. Só adiciona, não apaga nada. As metas antigas que uma nova substitui ficam arquivadas e o histórico mantém-se.</p>
+  const t0 = todayKey();
+  return `<div><label for="f-start">Começar em</label><input class="inp" id="f-start" data-f="start" type="date" min="${t0}" value="${esc(s.d.start || t0)}"></div>
+    <p class="help" style="margin-top:-4px">Até essa data as metas novas não aparecem nem contam, e as antigas que elas substituem continuam normais.</p>
+    <p class="help" style="margin-top:-8px">Toca para escolher. Só adiciona, não apaga nada. As metas antigas que uma nova substitui ficam arquivadas e o histórico mantém-se.</p>
     ${groups.map(gr => `<h3 class="sub-title" style="margin-top:18px">${esc(gr)}</h3><div class="group">${CATALOG.filter(it => it.group === gr).map(it => {
       const have = hasGoalNamed(it.name), on = !!s.d.sel[it.key];
       const rep = (it.replaces || []).filter(hasGoalNamed);
@@ -67,6 +70,8 @@ function librarySheetBody(s) {
 
 function saveLibrarySheet() {
   const s = ui.sheet, today = todayKey();
+  let start = /^\d{4}-\d{2}-\d{2}$/.test(s.d.start || '') ? s.d.start : today;
+  if (start < today) start = today;
   const items = CATALOG.filter(it => s.d.sel[it.key] && !hasGoalNamed(it.name));
   if (!items.length) { toast('Escolhe pelo menos uma meta.'); return; }
   let archived = 0;
@@ -76,15 +81,15 @@ function saveLibrarySheet() {
     state.goals.push(cleanGoal({
       id: uid(), name: it.name, emoji: it.emoji, catId: cd.id, kind: it.src ? 'number' : (it.kind || 'check'), freq: it.freq || 'daily',
       src: it.src || null, target: it.target == null ? null : it.target, cmp: it.cmp || 'max', unit: it.unit || '', step: it.step || 1,
-      createdAt: today, archivedAt: null
+      createdAt: start, archivedAt: null
     }));
     (it.replaces || []).forEach(n => {
       const old = state.goals.find(g => !g.archivedAt && g.name === n);
       if (!old) return;
-      old.archivedAt = (state.logs[today] && old.id in state.logs[today]) ? addDays(today, 1) : today;
+      old.archivedAt = (start === today && state.logs[today] && old.id in state.logs[today]) ? addDays(today, 1) : start;
       archived++;
     });
   });
   save(); closeSheet(); render();
-  toast(`${items.length} ${items.length === 1 ? 'meta adicionada' : 'metas adicionadas'}${archived ? `, ${archived} arquivadas` : ''}`);
+  toast(`${items.length} ${items.length === 1 ? 'meta adicionada' : 'metas adicionadas'}${start > today ? ' (começam a ' + start.split('-').reverse().join('/') + ')' : ''}${archived ? `, ${archived} arquivadas` : ''}`);
 }
